@@ -1,0 +1,81 @@
+/* ChatMessage.css */
+.message {
+  display: flex;
+  animation: fadeInUp 0.25s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.message--user      { justify-content: flex-end; }
+.message--assistant { justify-content: flex-start; }
+
+.message-content {
+  padding: 0.9rem 1.2rem;
+  border-radius: 1rem;
+  line-height: 1.65;
+  font-size: 0.95rem;
+  word-wrap: break-word;
+  max-width: 80%;
+}
+
+.message-content--user {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  border-bottom-right-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.message-content--assistant {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  border-bottom-left-radius: 0.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Markdown inside assistant messages */
+.message-content--assistant p  { margin-bottom: 0.75rem; }
+.message-content--assistant p:last-child { margin-bottom: 0; }
+.message-content--assistant h1,
+.message-content--assistant h2,
+.message-content--assistant h3 { margin: 1rem 0 0.5rem; color: #f1f5f9; }
+.message-content--assistant ul,
+.message-content--assistant ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.message-content--assistant pre {
+  background: #0f172a;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border: 1px solid #334155;
+}
+.message-content--assistant code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.88em;
+}
+.message-content--assistant pre code { background: none; padding: 0; }
+
+/* Thinking blocks */
+.thinking-block {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px dashed #334155;
+  border-radius: 0.5rem;
+  font-size: 0.88em;
+  color: #94a3b8;
+}
+.thinking-block summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: #cbd5e1;
+  margin-bottom: 0.5rem;
+  user-select: none;
+}
+.thinking-block summary:hover { color: #93c5fd; }
