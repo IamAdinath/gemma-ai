@@ -242,6 +242,78 @@ h1 {
 .model-btn.active[data-mode="code"] {
     background: linear-gradient(135deg, #8b5cf6, #6d28d9);
 }
+.model-btn.active[data-mode="story"] {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Agent Steps Panel */
+.agent-steps-panel {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    min-width: 280px;
+    max-width: 600px;
+}
+
+.agent-step {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.agent-step-icon {
+    flex-shrink: 0;
+}
+
+.agent-step-label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.agent-step-detail {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+/* Bhashini action button */
+.bhashini-btn {
+    margin-top: 0.75rem;
+    padding: 0.35rem 0.8rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: inherit;
+    transition: all 0.2s;
+    display: block;
+}
+.bhashini-btn:hover {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.bhashini-result {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-left: 3px solid #10b981;
+    background: rgba(16, 185, 129, 0.05);
+    border-radius: 0 0.5rem 0.5rem 0;
+    font-size: 0.93rem;
+    line-height: 1.6;
+}
 
 .header-actions {
     display: flex;
