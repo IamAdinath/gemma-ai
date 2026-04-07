@@ -1,4 +1,3 @@
-// components/BhashiniModal.jsx
 import { useState, useEffect } from 'react'
 import { useToast } from '../hooks/useToast'
 import './BhashiniModal.css'

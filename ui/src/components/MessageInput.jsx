@@ -1,4 +1,3 @@
-// components/MessageInput.jsx
 import { useRef, useEffect } from 'react'
 import './MessageInput.css'
 

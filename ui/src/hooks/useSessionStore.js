@@ -1,16 +1,9 @@
-// hooks/useSessionStore.js
-//
-// Storage split:
-//   localStorage                  → sessions INDEX (id, title, updatedAt)  — sidebar, instant
-//   backend/data/chats/<id>.json  → full session (messages)                 — loaded on switch
-//   backend/data/contexts/<id>.json → per-chat knowledge context            — read by agent
 
 import { useState, useEffect, useCallback } from 'react'
 import { chatsApi } from '../services/api'
 
 const INDEX_KEY = 'gemma_sessions_index'
 
-// ── Default system prompt ──────────────────────────────────────────────────────
 function makeSystemPrompt() {
   return {
     role: 'system',
@@ -32,7 +25,6 @@ function makeNewSession() {
   }
 }
 
-// ── Index helpers (localStorage — just id/title/updatedAt) ────────────────────
 function loadIndex() {
   try {
     const raw = JSON.parse(localStorage.getItem(INDEX_KEY) || '[]')
@@ -49,14 +41,12 @@ function saveIndex(index) {
   )
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
 export function useSessionStore() {
   const [index, setIndex] = useState(() => loadIndex())          // lightweight list
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [currentSession, setCurrentSession] = useState(null)     // full session w/ messages
   const [loadingSession, setLoadingSession] = useState(false)
 
-  // ── Bootstrap: create first session if index is empty ─────────────────────
   useEffect(() => {
     if (index.length === 0) {
       const fresh = makeNewSession()
@@ -71,7 +61,6 @@ export function useSessionStore() {
     }
   }, []) // run once on mount
 
-  // ── Load full session when currentSessionId changes ───────────────────────
   useEffect(() => {
     if (!currentSessionId) return
     setLoadingSession(true)
@@ -105,7 +94,6 @@ export function useSessionStore() {
       })
   }, [currentSessionId])
 
-  // ── Actions ────────────────────────────────────────────────────────────────
   const createSession = useCallback(() => {
     const fresh = makeNewSession()
     chatsApi.save(fresh)
@@ -147,11 +135,6 @@ export function useSessionStore() {
       return next
     })
   }, [currentSessionId])
-
-  /**
-   * Persist an updated session to the backend file and sync the index.
-   * Accepts a full session object (with messages).
-   */
   const updateSession = useCallback((updatedSession) => {
     chatsApi.save(updatedSession)   // write full session to backend
     setCurrentSession(updatedSession)

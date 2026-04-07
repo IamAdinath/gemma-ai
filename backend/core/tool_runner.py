@@ -1,7 +1,3 @@
-"""
-core/tool_runner.py
-All tool execution logic lives here — routers stay thin HTTP handlers.
-"""
 import re
 import subprocess
 import urllib.request
@@ -20,7 +16,6 @@ from core.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _strip_html(html: str) -> str:
     """Remove tags and collapse whitespace, capped to URL_CONTENT_MAX_CHARS."""
@@ -31,7 +26,6 @@ def _strip_html(html: str) -> str:
     return text[:URL_CONTENT_MAX_CHARS]
 
 
-# ── Tool Implementations ──────────────────────────────────────────────────────
 
 def run_python(code: str) -> dict[str, Any]:
     """

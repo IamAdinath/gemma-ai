@@ -1,8 +1,3 @@
-"""
-api/routes/context.py
-Namespace: /api/context
-Handles per-session knowledge context files stored in backend/data/contexts/.
-"""
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from core.config import CONTEXTS_DIR

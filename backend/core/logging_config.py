@@ -1,17 +1,8 @@
-"""
-core/logging_config.py
-Centralised logging setup for the Gemma AI backend.
-
-Usage (in any module):
-    from core.logging_config import get_logger
-    logger = get_logger(__name__)
-"""
 import logging
 import sys
 from datetime import datetime
 
 
-# ── ANSI colour codes ──────────────────────────────────────────────────────────
 RESET  = "\033[0m"
 BOLD   = "\033[1m"
 DIM    = "\033[2m"

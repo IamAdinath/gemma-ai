@@ -1,4 +1,3 @@
-// hooks/useAgent.js
 // ReAct agentic loop — Observe → Think → Act → Observe
 
 import { contextApi, toolsApi } from '../services/api'
@@ -17,12 +16,6 @@ const MODE_PROMPTS = {
   code:  'You are an elite software architect. Use tools to verify logic, run code, or fetch documentation. Output clean, well-commented code.',
   story: 'You are a master storyteller. Write vivid, culturally rich scripts in English, Hindi, or Marathi. Use <think> tags to plan your narrative before writing. IMPORTANT: Respond only with natural language prose or script text. Never output JSON, tool calls, or structured data of any kind — not even as examples.',
 }
-
-/**
- * Strip hallucinated tool-call JSON blocks that non-tool models (e.g. DeepSeek)
- * sometimes output as plain text. Matches both bare JSON objects with a "name"
- * key and markdown-fenced JSON code blocks containing tool call patterns.
- */
 function sanitizeForDisplay(text) {
   // Remove fenced ```json blocks containing tool-call shaped objects
   let out = text.replace(/```json[\s\S]*?"name"[\s\S]*?```/gi, '')
@@ -152,19 +145,6 @@ async function executeTool(name, args, sessionId, onStep) {
       return 'Unknown tool.'
   }
 }
-
-/**
- * Run the ReAct agentic loop.
- *
- * @param {object} params
- * @param {string} params.mode          - 'fast' | 'chat' | 'code' | 'story'
- * @param {Array}  params.messages      - current session message history
- * @param {string} params.sessionId     - for context file lookups
- * @param {Function} params.onToken     - called with each streamed token string
- * @param {Function} params.onStep      - called with each agent step { icon, label, detail }
- * @param {Function} params.onDone      - called with final full assistant response string
- * @param {Function} params.onError     - called with error message string
- */
 export async function runAgentLoop({
   mode,
   messages,
@@ -224,8 +204,6 @@ export async function runAgentLoop({
         onChunk: (parsed) => {
           if (parsed.message?.content) {
             fullResponse += parsed.message.content
-            // For non-tool models, strip any hallucinated JSON tool-call blocks
-            // before they appear in the streaming UI
             const display = supportsTools ? fullResponse : sanitizeForDisplay(fullResponse)
             onToken(display)
           }

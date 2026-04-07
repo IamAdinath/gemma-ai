@@ -1,4 +1,3 @@
-// services/ollama.js
 // All streaming + model management calls to Ollama (direct, port 11434)
 
 const OLLAMA = 'http://127.0.0.1:11434'

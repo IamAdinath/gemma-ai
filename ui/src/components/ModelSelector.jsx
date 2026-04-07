@@ -1,4 +1,3 @@
-// components/ModelSelector.jsx
 import './ModelSelector.css'
 
 const MODES = [

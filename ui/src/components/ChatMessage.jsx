@@ -1,4 +1,3 @@
-// components/ChatMessage.jsx
 import { useEffect, useRef } from 'react'
 import { marked } from 'marked'
 import './ChatMessage.css'

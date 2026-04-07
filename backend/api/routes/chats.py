@@ -1,8 +1,3 @@
-"""
-api/routes/chats.py
-Namespace: /api/chats
-Manages per-session chat history as individual JSON files in backend/data/chats/.
-"""
 import json
 from fastapi import APIRouter, HTTPException, Request, Response
 from core.config import DATA_DIR

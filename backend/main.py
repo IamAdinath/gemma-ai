@@ -1,12 +1,3 @@
-"""
-main.py — FastAPI application entry point.
-
-Responsibilities:
-  - Create the FastAPI app instance
-  - Register all API routers (namespaced under /api/*)
-  - Mount the ui/ directory as static files at root "/"
-  - Configure CORS and structured logging
-"""
 import time
 import logging
 
@@ -18,18 +9,15 @@ from core.config import ALLOWED_ORIGINS, UI_DIR
 from core.logging_config import setup_logging, get_logger
 from api.routes import context, tools, chats
 
-# ── Logging ───────────────────────────────────────────────────────────────────
 setup_logging(level="INFO")
 logger = get_logger("main")
 
-# ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Gemma AI Backend",
     description="Local agentic AI backend — serves UI and tool execution APIs.",
     version="1.0.0",
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -39,7 +27,6 @@ app.add_middleware(
 )
 
 
-# ── Request / Response logging middleware ─────────────────────────────────────
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start = time.perf_counter()
@@ -65,7 +52,6 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# ── Startup / Shutdown events ──────────────────────────────────────────────────
 @app.on_event("startup")
 async def on_startup():
     logger.info("\033[1;32m✓ Gemma AI backend started\033[0m")
@@ -77,10 +63,8 @@ async def on_shutdown():
     logger.info("\033[1;31m✗ Gemma AI backend shutting down\033[0m")
 
 
-# ── API Routers ───────────────────────────────────────────────────────────────
 app.include_router(context.router)
 app.include_router(tools.router)
 app.include_router(chats.router)
 
-# ── Static UI (must be last — catch-all) ─────────────────────────────────────
 app.mount("/", StaticFiles(directory=str(UI_DIR), html=True), name="ui")

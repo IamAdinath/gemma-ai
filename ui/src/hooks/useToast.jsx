@@ -1,4 +1,3 @@
-// hooks/useToast.js
 // Context-based toast system — use useToast() anywhere in the app
 
 import { createContext, useContext, useState, useCallback, useRef } from 'react'
@@ -15,13 +14,6 @@ export function ToastProvider({ children }) {
     clearTimeout(timers.current[id])
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
-
-  /**
-   * Add a toast.
-   * @param {string} message
-   * @param {'success'|'error'|'warning'|'info'} type
-   * @param {number} duration  ms before auto-dismiss (0 = never)
-   */
   const toast = useCallback((message, type = 'info', duration = 4000) => {
     const id = ++_idCounter
     setToasts((prev) => [...prev, { id, message, type }])

@@ -1,4 +1,3 @@
-// components/ToastContainer.jsx
 import { useToast } from '../hooks/useToast'
 import './ToastContainer.css'
 

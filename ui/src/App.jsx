@@ -38,19 +38,16 @@ export default function App() {
 
   const chatEndRef = useRef(null)
 
-  // ── Ollama health check ──────────────────────────────────────────────────────
   useEffect(() => {
     checkOllamaStatus().then((ok) =>
       setStatus({ online: ok, text: ok ? 'Ollama Active' : 'Ollama Offline' })
     )
   }, [])
 
-  // ── Auto-scroll ──────────────────────────────────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [currentSession?.messages, streamingText, agentSteps])
 
-  // ── Model swap ───────────────────────────────────────────────────────────────
   const handleModeChange = useCallback(async (mode) => {
     if (mode === currentMode || isSwapping || isGenerating) return
     setIsSwapping(true)
@@ -72,13 +69,11 @@ export default function App() {
     setIsSwapping(false)
   }, [currentMode, isSwapping, isGenerating])
 
-  // ── Delete session + context file ────────────────────────────────────────────
   const handleDeleteSession = useCallback((id) => {
     chatsApi.delete(id).catch(() => {})
     deleteSession(id)
   }, [deleteSession])
 
-  // ── Attach context ────────────────────────────────────────────────────────────
   const handleAttachContext = useCallback(async () => {
     let existing = '{}'
     try {
@@ -96,7 +91,6 @@ export default function App() {
     }
   }, [currentSessionId])
 
-  // ── Send message → agent loop ─────────────────────────────────────────────────
   const handleSend = useCallback(async (text) => {
     if (isGenerating || isSwapping || !currentSession) return
 
@@ -144,7 +138,6 @@ export default function App() {
     setAgentSteps([])
   }, [currentSession, currentSessionId, currentMode, isGenerating, isSwapping, updateSession])
 
-  // ── Render messages ───────────────────────────────────────────────────────────
   const visibleMessages = (currentSession?.messages || []).filter(
     (m) => m.role !== 'system' && m.role !== 'tool'
   )

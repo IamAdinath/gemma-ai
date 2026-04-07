@@ -1,8 +1,3 @@
-"""
-api/routes/tools.py
-Namespace: /api/tools
-Exposes sandboxed tool execution endpoints used by the agentic loop in the UI.
-"""
 from fastapi import APIRouter
 from pydantic import BaseModel, HttpUrl
 
@@ -14,7 +9,6 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/tools", tags=["tools"])
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
 
 class RunPythonRequest(BaseModel):
     code: str
@@ -29,7 +23,6 @@ class FetchUrlResponse(BaseModel):
     content: str
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/run_python", response_model=RunPythonResponse)
 async def run_python(payload: RunPythonRequest) -> RunPythonResponse:

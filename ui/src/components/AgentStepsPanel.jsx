@@ -1,4 +1,3 @@
-// components/AgentStepsPanel.jsx
 import './AgentStepsPanel.css'
 
 export default function AgentStepsPanel({ steps }) {

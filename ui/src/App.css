@@ -27,7 +27,6 @@ body {
   overflow: hidden;
 }
 
-/* ── Main content column ───────────────────────────────── */
 .app-main {
   flex: 1;
   display: flex;
@@ -36,7 +35,6 @@ body {
   overflow: hidden;
 }
 
-/* ── Header ─────────────────────────────────────────────── */
 .app-header {
   display: flex;
   align-items: center;
@@ -116,7 +114,6 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; white-space:
   transition: background 0.3s;
 }
 
-/* ── Chat area ───────────────────────────────────────────── */
 .chat-area {
   flex: 1;
   overflow-y: auto;
@@ -139,7 +136,6 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; white-space:
   margin-top: 4rem;
 }
 
-/* ── Thinking spinner ────────────────────────────────────── */
 .thinking-spinner {
   display: flex;
   align-items: center;
@@ -164,7 +160,6 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; white-space:
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Footer ──────────────────────────────────────────────── */
 .app-footer {
   padding: 1.25rem 2rem 1.5rem;
   border-top: 1px solid var(--border);
@@ -181,7 +176,6 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; white-space:
   text-align: center;
 }
 
-/* ── Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
