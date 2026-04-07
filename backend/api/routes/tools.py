@@ -22,7 +22,9 @@ class FetchUrlResponse(BaseModel):
     url: str
     content: str
 
-
+class SearchWebResponse(BaseModel):
+    query: str
+    results: str
 
 @router.post("/run_python", response_model=RunPythonResponse)
 async def run_python(payload: RunPythonRequest) -> RunPythonResponse:
@@ -49,3 +51,14 @@ async def fetch_url(url: str) -> FetchUrlResponse:
         return FetchUrlResponse(url=url, content=f"Error: {result['error']}")
     logger.info("Tool success    tool=fetch_url  bytes=%d", len(result["content"]))
     return FetchUrlResponse(url=result["url"], content=result["content"])
+
+@router.get("/search_web", response_model=SearchWebResponse)
+async def search_web(query: str) -> SearchWebResponse:
+    """Search DuckDuckGo via duckduckgo_search lib."""
+    logger.info("Tool invoked    tool=search_web  query=%s", query)
+    result = tool_runner.search_web(query)
+    if "error" in result:
+        logger.warning("Tool error      tool=search_web  err=%s", result["error"])
+        return SearchWebResponse(query=query, results=f"Error: {result['error']}")
+    logger.info("Tool success    tool=search_web")
+    return SearchWebResponse(query=result["query"], results=result["results"])

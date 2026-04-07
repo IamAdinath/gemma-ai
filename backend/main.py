@@ -63,6 +63,33 @@ async def on_shutdown():
     logger.info("\033[1;31m✗ Gemma AI backend shutting down\033[0m")
 
 
+@app.post("/api/shutdown")
+async def shutdown_system():
+    """Kill switch called from the UI. Unloads models and kills servers gracefully."""
+    import os
+    import signal
+    import threading
+    import httpx
+
+    def kill_servers():
+        # Unload all models to free RAM immediately
+        with httpx.Client() as client:
+            for model in ["gemma4:e2b", "qwen2.5-coder:7b", "deepseek-r1:7b"]:
+                try:
+                    client.post("http://127.0.0.1:11434/api/generate", json={"model": model, "keep_alive": 0})
+                except Exception:
+                    pass
+        # Give the API time to return response to UI before dying
+        time.sleep(1)
+        # Kill Vite dev server
+        os.system("pkill -f vite")
+        # Kill FastAPI gracefully (triggers on_shutdown, then start.sh cleanup)
+        os.kill(os.getpid(), signal.SIGINT)
+
+    threading.Thread(target=kill_servers).start()
+    return {"status": "shutting down"}
+
+
 app.include_router(context.router)
 app.include_router(tools.router)
 app.include_router(chats.router)
