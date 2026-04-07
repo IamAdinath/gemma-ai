@@ -1,7 +1,6 @@
 import './ModelSelector.css'
 
 const MODES = [
-  { id: 'fast',  label: '⚡ Fast'  },
   { id: 'chat',  label: '🧠 Chat'  },
   { id: 'code',  label: '💻 Code'  },
   { id: 'story', label: '✍️ Story' },

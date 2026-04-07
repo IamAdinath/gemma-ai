@@ -5,6 +5,7 @@ import ChatMessage from './components/ChatMessage'
 import AgentStepsPanel from './components/AgentStepsPanel'
 import MessageInput from './components/MessageInput'
 import BhashiniModal from './components/BhashiniModal'
+import ConfirmModal from './components/ConfirmModal'
 import ToastContainer from './components/ToastContainer'
 import { useSessionStore } from './hooks/useSessionStore'
 import { runAgentLoop } from './hooks/useAgent'
@@ -14,8 +15,7 @@ import { checkOllamaStatus, unloadModel, preloadModel } from './services/ollama'
 import './App.css'
 
 const MODELS = {
-  fast:  'gemma4:e2b',
-  chat:  'qwen2.5:7b',
+  chat:  'gemma4:e2b',
   code:  'qwen2.5-coder:7b',
   story: 'deepseek-r1:7b',
 }
@@ -35,6 +35,7 @@ export default function App() {
   const [agentSteps, setAgentSteps]       = useState([])
   const [streamingText, setStreamingText] = useState('')
   const [bhashiniOpen, setBhashiniOpen]   = useState(false)
+  const [turnOffConfirmOpen, setTurnOffConfirmOpen] = useState(false)
 
   const chatEndRef = useRef(null)
 
@@ -73,23 +74,6 @@ export default function App() {
     chatsApi.delete(id).catch(() => {})
     deleteSession(id)
   }, [deleteSession])
-
-  const handleAttachContext = useCallback(async () => {
-    let existing = '{}'
-    try {
-      const resp = await contextApi.get(currentSessionId)
-      if (resp.ok) existing = await resp.text()
-    } catch {}
-    const input = prompt('Paste custom rules, background, or JSON knowledge:\nThe agent will read this automatically.', existing)
-    if (input !== null) {
-      try {
-        await contextApi.save(currentSessionId, input)
-        toast.success(`Context saved — agent will use it in this chat`)
-      } catch {
-        toast.error('Failed to save context file. Is the backend running?')
-      }
-    }
-  }, [currentSessionId])
 
   const handleSend = useCallback(async (text) => {
     if (isGenerating || isSwapping || !currentSession) return
@@ -167,11 +151,11 @@ export default function App() {
           />
 
           <div className="header-actions">
+            <button className="header-btn power-btn" onClick={() => setTurnOffConfirmOpen(true)} style={{ color: '#ef4444' }}>
+              ⏻ Turn Off
+            </button>
             <button className="header-btn" onClick={() => setBhashiniOpen(true)}>
               ⚙️ Bhashini
-            </button>
-            <button className="header-btn" onClick={handleAttachContext}>
-              📄 Context
             </button>
             <div className="status-pill">
               <span className="status-dot" style={{ background: status.online ? '#10b981' : '#ef4444', boxShadow: `0 0 7px ${status.online ? '#10b981' : '#ef4444'}` }} />
@@ -229,6 +213,21 @@ export default function App() {
       </div>
 
       <BhashiniModal isOpen={bhashiniOpen} onClose={() => setBhashiniOpen(false)} />
+      
+      <ConfirmModal
+        isOpen={turnOffConfirmOpen}
+        title="Turn Off Gemma AI"
+        message="This will force-unload any active AI models to release RAM, stop all backend and frontend services, and close the application."
+        confirmText="Turn Off"
+        destructive={true}
+        onConfirm={async () => {
+          toast.info('Shutting down... you can safely close this window.')
+          await fetch('/api/shutdown', { method: 'POST' }).catch(() => {})
+          setTimeout(() => window.close(), 1000)
+        }}
+        onCancel={() => setTurnOffConfirmOpen(false)}
+      />
+
       <ToastContainer />
     </div>
   )

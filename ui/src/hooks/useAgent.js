@@ -4,14 +4,12 @@ import { contextApi, toolsApi } from '../services/api'
 import { streamChat } from '../services/ollama'
 
 const MODELS = {
-  fast:  { id: 'gemma4:e2b',         tools: false },
-  chat:  { id: 'qwen2.5:7b',          tools: true  },
+  chat:  { id: 'gemma4:e2b',          tools: true  },
   code:  { id: 'qwen2.5-coder:7b',    tools: true  },
   story: { id: 'deepseek-r1:7b',      tools: false },
 }
 
 const MODE_PROMPTS = {
-  fast:  'Respond directly, concisely and quickly. Output plain conversational text only. Do not output JSON, XML, or any structured data formats.',
   chat:  'You are a powerful agentic AI assistant. Use tools proactively whenever you need real-world data, web info, or to run code.',
   code:  'You are an elite software architect. Use tools to verify logic, run code, or fetch documentation. Output clean, well-commented code.',
   story: 'You are a master storyteller. Write vivid, culturally rich scripts in English, Hindi, or Marathi. Use <think> tags to plan your narrative before writing. IMPORTANT: Respond only with natural language prose or script text. Never output JSON, tool calls, or structured data of any kind — not even as examples.',
@@ -89,25 +87,12 @@ async function executeTool(name, args, sessionId, onStep) {
   switch (name) {
     case 'web_search': {
       onStep({ icon: '🔍', label: 'Searching the web', detail: args.query })
-      try {
-        const q = encodeURIComponent(args.query)
-        const resp = await fetch(
-          `https://api.duckduckgo.com/?q=${q}&format=json&no_html=1&skip_disambig=1`
-        )
-        const data = await resp.json()
-        const results = [
-          data.AbstractText && `Summary: ${data.AbstractText}`,
-          ...(data.RelatedTopics || []).slice(0, 5).map((t) => t.Text || '').filter(Boolean),
-        ].filter(Boolean)
-        const output =
-          results.length > 0
-            ? results.join('\n\n')
-            : `No instant answer for: ${args.query}. Try fetch_url with a specific URL.`
-        onStep({ icon: '✅', label: 'Search complete', detail: `${results.length} results` })
-        return output
-      } catch (e) {
-        return `Search failed: ${e.message}`
+      const result = await toolsApi.searchWeb(args.query)
+      if (result.results && result.results.startsWith('Error:')) {
+        return result.results
       }
+      onStep({ icon: '✅', label: 'Search complete' })
+      return result.results
     }
 
     case 'fetch_url': {

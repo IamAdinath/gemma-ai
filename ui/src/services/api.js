@@ -18,6 +18,9 @@ export const toolsApi = {
 
   fetchUrl: (url) =>
     fetch(`${BASE}/api/tools/fetch_url?url=${encodeURIComponent(url)}`).then((r) => r.json()),
+    
+  searchWeb: (query) =>
+    fetch(`${BASE}/api/tools/search_web?query=${encodeURIComponent(query)}`).then((r) => r.json()),
 }
 export const chatsApi = {
   get: (sessionId) =>

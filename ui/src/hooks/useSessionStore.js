@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
-import { chatsApi } from '../services/api'
+import { chatsApi, contextApi } from '../services/api'
+import { useToast } from './useToast'
 
 const INDEX_KEY = 'gemma_sessions_index'
 
@@ -46,11 +47,13 @@ export function useSessionStore() {
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [currentSession, setCurrentSession] = useState(null)     // full session w/ messages
   const [loadingSession, setLoadingSession] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (index.length === 0) {
       const fresh = makeNewSession()
       chatsApi.save(fresh)          // persist to backend
+      contextApi.save(fresh.id, '{}').catch(() => {}) // Pre-warm context
       const newIndex = [{ id: fresh.id, title: fresh.title, updatedAt: fresh.updatedAt }]
       setIndex(newIndex)
       saveIndex(newIndex)
@@ -97,7 +100,11 @@ export function useSessionStore() {
   const createSession = useCallback(() => {
     const fresh = makeNewSession()
     chatsApi.save(fresh)
+    contextApi.save(fresh.id, '{}').catch(() => {}) // Pre-warm context
     setIndex((prev) => {
+      if (prev.length >= 24) {
+        toast.warning(`You have ${prev.length + 1} chats. Consider deleting old ones to save disk space.`)
+      }
       const next = [{ id: fresh.id, title: fresh.title, updatedAt: fresh.updatedAt }, ...prev]
       saveIndex(next)
       return next
@@ -105,7 +112,7 @@ export function useSessionStore() {
     setCurrentSessionId(fresh.id)
     setCurrentSession(fresh)
     return fresh
-  }, [])
+  }, [toast])
 
   const switchSession = useCallback((id) => {
     if (id === currentSessionId) return
@@ -121,6 +128,7 @@ export function useSessionStore() {
         // Create a replacement session
         const fresh = makeNewSession()
         chatsApi.save(fresh)
+        contextApi.save(fresh.id, '{}').catch(() => {}) // Pre-warm context
         const newIndex = [{ id: fresh.id, title: fresh.title, updatedAt: fresh.updatedAt }]
         saveIndex(newIndex)
         setCurrentSessionId(fresh.id)

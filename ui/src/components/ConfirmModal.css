@@ -1,0 +1,26 @@
+.confirm-modal {
+  max-width: 400px;
+  text-align: center;
+}
+
+.confirm-message {
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.confirm-actions {
+  justify-content: center;
+  gap: 12px;
+}
+
+.modal-btn--destructive {
+  background-color: var(--danger, #ef4444);
+  color: white;
+  border: none;
+}
+
+.modal-btn--destructive:hover {
+  background-color: #dc2626;
+}

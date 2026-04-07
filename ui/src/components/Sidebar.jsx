@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import ConfirmModal from './ConfirmModal'
 import './Sidebar.css'
 
 export default function Sidebar({ sessions, currentSessionId, onNew, onSwitch, onDelete }) {
+  const [sessionToDelete, setSessionToDelete] = useState(null)
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -20,23 +23,33 @@ export default function Sidebar({ sessions, currentSessionId, onNew, onSwitch, o
               session={session}
               isActive={session.id === currentSessionId}
               onSwitch={onSwitch}
-              onDelete={onDelete}
+              onDeleteRequest={() => setSessionToDelete(session)}
             />
           ))}
         </ul>
       </div>
+
+      <ConfirmModal
+        isOpen={!!sessionToDelete}
+        title="Delete Chat"
+        message={`Are you sure you want to delete "${sessionToDelete?.title}"? This cannot be undone.`}
+        confirmText="Delete"
+        destructive={true}
+        onConfirm={() => {
+          if (sessionToDelete) onDelete(sessionToDelete.id)
+        }}
+        onCancel={() => setSessionToDelete(null)}
+      />
     </aside>
   )
 }
 
-function SessionItem({ session, isActive, onSwitch, onDelete }) {
+function SessionItem({ session, isActive, onSwitch, onDeleteRequest }) {
   const [hovered, setHovered] = useState(false)
 
   const handleDelete = (e) => {
     e.stopPropagation()
-    if (confirm(`Delete "${session.title}" and its context file?`)) {
-      onDelete(session.id)
-    }
+    onDeleteRequest()
   }
 
   return (
