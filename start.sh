@@ -1,52 +1,65 @@
 #!/bin/bash
+set -e
 
-# Configuration
-PORT=8000
-echo -e "\033[1;34mStarting Gemma AI Chat Environment\033[0m"
+BLUE='\033[1;34m'; GREEN='\033[1;32m'; YELLOW='\033[1;33m'; RED='\033[1;31m'; NC='\033[0m'
 
-# 1. Start Ollama with permissive CORS (needed for the browser fetch API to work locally)
-echo -e "➔ Configuring Ollama CORS..."
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}  Gemma AI — Local Agentic Assistant   ${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# ── 1. Ollama ──────────────────────────────────────────────────────────────────
 export OLLAMA_ORIGINS="*"
-
-# Check if ollama is already running
 if ! pgrep -x "ollama" > /dev/null; then
-    echo -e "➔ Starting \033[1;32mollama serve\033[0m in background..."
+    echo -e "➔ ${GREEN}Starting ollama serve...${NC}"
     ollama serve > ollama.log 2>&1 &
     OLLAMA_PID=$!
-    echo "Ollama started with PID $OLLAMA_PID"
-    sleep 3 # Give it a moment to boot
+    sleep 3
 else
-    echo -e "➔ Ollama is \033[1;33malready running\033[0m. Please ensure it was started with OLLAMA_ORIGINS=\"*\" if you encounter connection issues."
+    echo -e "➔ ${YELLOW}Ollama already running.${NC}"
 fi
 
-# 2. Serve the frontend
-echo -e "➔ Starting static file server on \033[1;36mhttp://localhost:$PORT\033[0m"
+# ── 2. FastAPI backend (port 8000) ─────────────────────────────────────────────
+cd backend
+if [ ! -d "venv" ]; then
+    echo -e "➔ ${GREEN}Creating Python venv (3.12)...${NC}"
+    /opt/homebrew/bin/python3.12 -m venv venv
+fi
+source venv/bin/activate
+echo -e "➔ ${GREEN}Installing backend dependencies...${NC}"
+pip install -r requirements.txt -q
 
-# 3. Start Python API Backend in background
-echo -e "${BLUE}Starting dynamic Python API backend server on port 8000...${NC}"
-python3 server.py &
-PYTHON_PID=$!
+echo -e "➔ ${GREEN}Starting FastAPI on ${BLUE}http://localhost:8000${GREEN} (docs: /docs)${NC}"
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+UVICORN_PID=$!
+cd ..
 
-# 3. Open Browser
-sleep 1
+# ── 3. Vite dev server (port 5173) ─────────────────────────────────────────────
+cd ui
+echo -e "➔ ${GREEN}Installing frontend dependencies...${NC}"
+npm install -s
+echo -e "➔ ${GREEN}Starting Vite on ${BLUE}http://localhost:5173${NC}"
+npm run dev &
+VITE_PID=$!
+cd ..
+
+# ── 4. Open browser ────────────────────────────────────────────────────────────
+sleep 2
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    open http://localhost:$PORT
-else
-    echo -e "Please open \033[1;36mhttp://localhost:$PORT\033[0m in your browser."
+    open http://localhost:5173
 fi
 
-# 4. Handle Cleanup on Exit
+# ── 5. Cleanup ─────────────────────────────────────────────────────────────────
 function cleanup {
-    echo -e "\n\033[1;31mShutting down servers...\033[0m"
-    kill $PYTHON_PID
-    # Only kill ollama if we started it here
-    if [ -n "$OLLAMA_PID" ]; then
-        kill $OLLAMA_PID
-    fi
-    exit
+    echo -e "\n${RED}Shutting down...${NC}"
+    kill $VITE_PID    2>/dev/null
+    kill $UVICORN_PID 2>/dev/null
+    [ -n "$OLLAMA_PID" ] && kill $OLLAMA_PID 2>/dev/null
+    exit 0
 }
-
 trap cleanup INT TERM
 
-echo -e "\n\033[1;32mEverything is running!\033[0m Press Ctrl+C to shut down."
-wait $PYTHON_PID
+echo -e "\n${GREEN}All systems running!${NC}"
+echo -e "  UI  → ${BLUE}http://localhost:5173${NC}"
+echo -e "  API → ${BLUE}http://localhost:8000/docs${NC}"
+echo -e "\nPress Ctrl+C to stop all servers.\n"
+wait $VITE_PID

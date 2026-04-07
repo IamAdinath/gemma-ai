@@ -1,0 +1,42 @@
+/* ModelSelector.css */
+.model-selector {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid #1e293b;
+  gap: 0.1rem;
+}
+
+.mode-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 0.45rem 1.1rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mode-btn:hover:not(:disabled) {
+  color: #f8fafc;
+}
+
+.mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mode-btn.active {
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mode-btn--fast.active  { background: linear-gradient(135deg, #10b981, #059669); }
+.mode-btn--chat.active  { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+.mode-btn--code.active  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.mode-btn--story.active { background: linear-gradient(135deg, #f59e0b, #d97706); }

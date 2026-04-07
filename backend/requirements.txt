@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+duckduckgo-search~=6.4.0

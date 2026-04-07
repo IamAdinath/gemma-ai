@@ -1,0 +1,2 @@
+/* index.css — minimal global reset, body lives in App.css */
+* { box-sizing: border-box; margin: 0; padding: 0; }
