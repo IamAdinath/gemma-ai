@@ -12,10 +12,25 @@ const MODELS = {
 }
 
 const MODE_PROMPTS = {
-  fast:  'Respond directly, concisely and quickly. No reasoning tags.',
+  fast:  'Respond directly, concisely and quickly. Output plain conversational text only. Do not output JSON, XML, or any structured data formats.',
   chat:  'You are a powerful agentic AI assistant. Use tools proactively whenever you need real-world data, web info, or to run code.',
   code:  'You are an elite software architect. Use tools to verify logic, run code, or fetch documentation. Output clean, well-commented code.',
-  story: 'You are a master storyteller. Write vivid, culturally rich scripts in English, Hindi, or Marathi. Use <think> tags to plan your narrative before writing.',
+  story: 'You are a master storyteller. Write vivid, culturally rich scripts in English, Hindi, or Marathi. Use <think> tags to plan your narrative before writing. IMPORTANT: Respond only with natural language prose or script text. Never output JSON, tool calls, or structured data of any kind — not even as examples.',
+}
+
+/**
+ * Strip hallucinated tool-call JSON blocks that non-tool models (e.g. DeepSeek)
+ * sometimes output as plain text. Matches both bare JSON objects with a "name"
+ * key and markdown-fenced JSON code blocks containing tool call patterns.
+ */
+function sanitizeForDisplay(text) {
+  // Remove fenced ```json blocks containing tool-call shaped objects
+  let out = text.replace(/```json[\s\S]*?"name"[\s\S]*?```/gi, '')
+  // Remove bare JSON objects that look like tool calls { "name": ..., "arguments": ... }
+  out = out.replace(/\{[\s\S]{0,800}?"name"\s*:[\s\S]{0,800}?"arguments"[\s\S]{0,800}?\}/g, '')
+  // Collapse resulting triple blank lines
+  out = out.replace(/\n{3,}/g, '\n\n')
+  return out.trim()
 }
 
 const AGENTIC_TOOLS = [
@@ -209,7 +224,10 @@ export async function runAgentLoop({
         onChunk: (parsed) => {
           if (parsed.message?.content) {
             fullResponse += parsed.message.content
-            onToken(fullResponse)
+            // For non-tool models, strip any hallucinated JSON tool-call blocks
+            // before they appear in the streaming UI
+            const display = supportsTools ? fullResponse : sanitizeForDisplay(fullResponse)
+            onToken(display)
           }
           if (parsed.message?.tool_calls) {
             parsed.message.tool_calls.forEach((tc) => {
@@ -246,12 +264,14 @@ export async function runAgentLoop({
     } else {
       // No tool calls — we're done
       onStep({ icon: '✨', label: 'Answer ready' })
+      // Sanitize the stored response too so history doesn't contain raw JSON
+      const cleanedResponse = supportsTools ? fullResponse : sanitizeForDisplay(fullResponse)
       const finalMessages = [
         ...agentMessages,
-        { role: 'assistant', content: fullResponse },
+        { role: 'assistant', content: cleanedResponse },
       ]
-      onDone(fullResponse, finalMessages)
-      return { messages: finalMessages, finalResponse: fullResponse }
+      onDone(cleanedResponse, finalMessages)
+      return { messages: finalMessages, finalResponse: cleanedResponse }
     }
   }
 
