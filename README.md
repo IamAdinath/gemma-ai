@@ -6,7 +6,7 @@ A fully local, privacy-first AI chat application with a real agentic execution l
 
 ## ✨ Features
 
-- **4 Model Modes** — Fast, Chat (agentic), Code (agentic), Story
+- **3 Model Modes** — Chat (agentic), Code (agentic), Story
 - **Real Agentic Loop** — ReAct-style Observe → Think → Act → Observe cycle
 - **Live Agent Steps Panel** — watch the model decide and execute tools in real-time
 - **Agentic Tools** — web search, URL fetcher, Python code runner, context file read/write
@@ -22,8 +22,7 @@ A fully local, privacy-first AI chat application with a real agentic execution l
 
 | Mode | Model | Tools | Purpose |
 |------|-------|-------|---------|
-| ⚡ Fast | `gemma4:e2b` | ✗ | Instant, lightweight responses |
-| 🧠 Chat | `qwen2.5:7b` | ✓ | Deep reasoning + real agentic tool use |
+| 🧠 Chat | `gemma4:e2b` | ✓ | Deep reasoning + real agentic tool use |
 | 💻 Code | `qwen2.5-coder:7b` | ✓ | Code generation, runs/verifies its own code |
 | ✍️ Story | `deepseek-r1:7b` | ✗ | Marathi/Hindi/English storytelling |
 
@@ -49,7 +48,6 @@ brew install ollama
 
 ```bash
 ollama pull gemma4:e2b
-ollama pull qwen2.5:7b
 ollama pull qwen2.5-coder:7b
 ollama pull deepseek-r1:7b
 ```
@@ -71,9 +69,10 @@ chmod +x start.sh
 `start.sh` will automatically:
 - Start `ollama serve` with CORS enabled
 - Create a Python virtual environment at `backend/venv/` (first run only)
-- Install dependencies from `backend/requirements.txt`
-- Launch the FastAPI server with hot-reload at `http://localhost:8000`
-- Open the app in your browser
+- Install frontend (Vite/React) and backend (FastAPI) dependencies
+- Launch the FastAPI server at `http://localhost:8000`
+- Launch the Vite Dev Server at `http://localhost:5173`
+- Open the UI in your browser
 
 > **First launch** takes ~30 seconds to create the venv and install deps. Subsequent launches are instant.
 
@@ -86,14 +85,18 @@ gemma-ai/
 ├── start.sh                  ← Single launch entry point
 ├── README.md
 │
-├── ui/                       ← Frontend (Vanilla HTML/CSS/JS)
-│   ├── index.html
-│   ├── app.js                ← Session management, streaming, ReAct loop
-│   └── styles.css
+├── ui/                       ← Vite + React Frontend
+│   ├── src/
+│   │   ├── App.jsx           ← Bootstraps the UI and Agent loop
+│   │   ├── components/       ← UI components
+│   │   ├── hooks/            ← State hooks (useSessionStore, useAgent, useToast)
+│   │   └── services/         ← API connectors (ollama, fastapi)
+│   └── vite.config.js        ← Vite server config mapping /api to FastAPI
 │
 └── backend/                  ← Python FastAPI server
     ├── requirements.txt
-    ├── main.py               ← App entry point, router registration, static mount
+    ├── main.py               ← App entry point, logging, router config
+    ├── static/               ← Production UI build output
     │
     ├── api/
     │   └── routes/
@@ -105,7 +108,8 @@ gemma-ai/
     │   └── tool_runner.py    ← Tool execution logic (isolated from HTTP layer)
     │
     └── data/
-        └── contexts/         ← Per-chat JSON knowledge files (auto-created)
+        ├── chats/            ← Per-chat complete message history (JSON)
+        └── contexts/         ← Per-chat knowledge file used by AI (JSON)
 ```
 
 ---
@@ -116,6 +120,9 @@ Full interactive docs available at **[http://localhost:8000/docs](http://localho
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `GET` | `/api/chats/{id}` | Read full chat message history |
+| `POST` | `/api/chats/{id}` | Save/update chat message history |
+| `DELETE` | `/api/chats/{id}` | Delete chat history and context file |
 | `GET` | `/api/context/{id}` | Read session context file |
 | `POST` | `/api/context/{id}` | Write/overwrite session context |
 | `DELETE` | `/api/context/{id}` | Delete session context file |

@@ -5,6 +5,7 @@ import urllib.parse
 from typing import Any
 
 import httpx
+from duckduckgo_search import DDGS
 
 from core.config import (
     PYTHON_EXEC_TIMEOUT,
@@ -68,3 +69,21 @@ def fetch_url(url: str) -> dict[str, Any]:
         return {"url": url, "content": _strip_html(raw_html)}
     except Exception as exc:  # noqa: BLE001
         return {"error": str(exc)}
+
+def search_web(query: str) -> dict[str, Any]:
+    """
+    Search the web using DuckDuckGo via duckduckgo_search.
+    Returns the top 5 results as a formatted string.
+    """
+    try:
+        results = DDGS().text(query, max_results=5)
+        if not results:
+            return {"results": f"No results found for: {query}. Try fetch_url with a direct website."}
+        
+        parsed = []
+        for r in results:
+            parsed.append(f"Title: {r.get('title')}\nURL: {r.get('href')}\nSnippet: {r.get('body')}")
+        
+        return {"query": query, "results": "\n\n".join(parsed)}
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"Search engine error: {str(exc)}"}
