@@ -15,6 +15,9 @@ from core.config import (
     URL_FETCH_TIMEOUT,
     URL_CONTENT_MAX_CHARS,
 )
+from core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,10 +47,16 @@ def run_python(code: str) -> dict[str, Any]:
             timeout=PYTHON_EXEC_TIMEOUT,
         )
         output = result.stdout or result.stderr or "(no output)"
+        if result.returncode != 0:
+            logger.warning("Tool warning    tool=run_python  exit=%d", result.returncode)
+        else:
+            logger.info("Tool success    tool=run_python  exit=0")
         return {"output": output[:2000]}
     except subprocess.TimeoutExpired:
+        logger.error("Tool timeout    tool=run_python  timeout=%ds", PYTHON_EXEC_TIMEOUT)
         return {"output": f"Error: execution timed out after {PYTHON_EXEC_TIMEOUT}s"}
     except Exception as exc:  # noqa: BLE001
+        logger.error("Tool error      tool=run_python  err=%s", exc)
         return {"error": str(exc)}
 
 
