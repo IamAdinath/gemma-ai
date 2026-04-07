@@ -1,8 +1,16 @@
 // hooks/useSessionStore.js
-import { useState, useCallback } from 'react'
+//
+// Storage split:
+//   localStorage                  → sessions INDEX (id, title, updatedAt)  — sidebar, instant
+//   backend/data/chats/<id>.json  → full session (messages)                 — loaded on switch
+//   backend/data/contexts/<id>.json → per-chat knowledge context            — read by agent
 
-const STORAGE_KEY = 'gemma_sessions'
+import { useState, useEffect, useCallback } from 'react'
+import { chatsApi } from '../services/api'
 
+const INDEX_KEY = 'gemma_sessions_index'
+
+// ── Default system prompt ──────────────────────────────────────────────────────
 function makeSystemPrompt() {
   return {
     role: 'system',
@@ -24,86 +32,149 @@ function makeNewSession() {
   }
 }
 
-function load() {
+// ── Index helpers (localStorage — just id/title/updatedAt) ────────────────────
+function loadIndex() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    // Sanitise: filter out any null/malformed entries that could cause .id errors
-    const valid = Array.isArray(parsed) ? parsed.filter((s) => s && s.id) : []
-    return valid
+    const raw = JSON.parse(localStorage.getItem(INDEX_KEY) || '[]')
+    return Array.isArray(raw) ? raw.filter((s) => s && s.id) : []
   } catch {
     return []
   }
 }
 
-function save(sessions) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
+function saveIndex(index) {
+  localStorage.setItem(
+    INDEX_KEY,
+    JSON.stringify(index.map(({ id, title, updatedAt }) => ({ id, title, updatedAt })))
+  )
 }
 
+// ── Hook ──────────────────────────────────────────────────────────────────────
 export function useSessionStore() {
-  // ── Derive initial state once from the same seed ─────────────────────────────
-  const [sessions, setSessions] = useState(() => {
-    const stored = load()
-    if (stored.length > 0) return stored
-    const fresh = makeNewSession()
-    save([fresh])
-    return [fresh]
-  })
+  const [index, setIndex] = useState(() => loadIndex())          // lightweight list
+  const [currentSessionId, setCurrentSessionId] = useState(null)
+  const [currentSession, setCurrentSession] = useState(null)     // full session w/ messages
+  const [loadingSession, setLoadingSession] = useState(false)
 
-  // Always seed currentSessionId from the *same* sessions array above
-  const [currentSessionId, setCurrentSessionId] = useState(
-    () => sessions[0]?.id ?? null
-  )
+  // ── Bootstrap: create first session if index is empty ─────────────────────
+  useEffect(() => {
+    if (index.length === 0) {
+      const fresh = makeNewSession()
+      chatsApi.save(fresh)          // persist to backend
+      const newIndex = [{ id: fresh.id, title: fresh.title, updatedAt: fresh.updatedAt }]
+      setIndex(newIndex)
+      saveIndex(newIndex)
+      setCurrentSessionId(fresh.id)
+      setCurrentSession(fresh)
+    } else {
+      setCurrentSessionId(index[0].id)
+    }
+  }, []) // run once on mount
 
-  // ── Actions ───────────────────────────────────────────────────────────────────
+  // ── Load full session when currentSessionId changes ───────────────────────
+  useEffect(() => {
+    if (!currentSessionId) return
+    setLoadingSession(true)
+    chatsApi.get(currentSessionId)
+      .then((data) => {
+        if (data) {
+          setCurrentSession(data)
+        } else {
+          // Backend file missing — recreate it from index metadata
+          const meta = index.find((s) => s.id === currentSessionId)
+          const recovered = {
+            id: currentSessionId,
+            title: meta?.title ?? 'New Chat',
+            updatedAt: Date.now(),
+            messages: [makeSystemPrompt()],
+          }
+          chatsApi.save(recovered)
+          setCurrentSession(recovered)
+        }
+        setLoadingSession(false)
+      })
+      .catch(() => {
+        // Backend unreachable — show a blank session, don't crash
+        setCurrentSession({
+          id: currentSessionId,
+          title: 'New Chat',
+          updatedAt: Date.now(),
+          messages: [makeSystemPrompt()],
+        })
+        setLoadingSession(false)
+      })
+  }, [currentSessionId])
+
+  // ── Actions ────────────────────────────────────────────────────────────────
   const createSession = useCallback(() => {
     const fresh = makeNewSession()
-    setSessions((prev) => {
-      const next = [fresh, ...prev]
-      save(next)
+    chatsApi.save(fresh)
+    setIndex((prev) => {
+      const next = [{ id: fresh.id, title: fresh.title, updatedAt: fresh.updatedAt }, ...prev]
+      saveIndex(next)
       return next
     })
     setCurrentSessionId(fresh.id)
+    setCurrentSession(fresh)
     return fresh
   }, [])
 
   const switchSession = useCallback((id) => {
+    if (id === currentSessionId) return
     setCurrentSessionId(id)
-  }, [])
+    setCurrentSession(null) // will be loaded by useEffect above
+  }, [currentSessionId])
 
   const deleteSession = useCallback((id) => {
-    setSessions((prev) => {
+    chatsApi.delete(id)
+    setIndex((prev) => {
       const next = prev.filter((s) => s.id !== id)
       if (next.length === 0) {
+        // Create a replacement session
         const fresh = makeNewSession()
-        save([fresh])
+        chatsApi.save(fresh)
+        const newIndex = [{ id: fresh.id, title: fresh.title, updatedAt: fresh.updatedAt }]
+        saveIndex(newIndex)
         setCurrentSessionId(fresh.id)
-        return [fresh]
+        setCurrentSession(fresh)
+        return newIndex
       }
-      save(next)
-      setCurrentSessionId((cur) => (cur === id ? next[0].id : cur))
+      saveIndex(next)
+      if (id === currentSessionId) {
+        setCurrentSessionId(next[0].id)
+        setCurrentSession(null)
+      }
+      return next
+    })
+  }, [currentSessionId])
+
+  /**
+   * Persist an updated session to the backend file and sync the index.
+   * Accepts a full session object (with messages).
+   */
+  const updateSession = useCallback((updatedSession) => {
+    chatsApi.save(updatedSession)   // write full session to backend
+    setCurrentSession(updatedSession)
+    setIndex((prev) => {
+      const updated = prev.map((s) =>
+        s.id === updatedSession.id
+          ? { id: s.id, title: updatedSession.title, updatedAt: updatedSession.updatedAt }
+          : s
+      )
+      // Bubble to top
+      const target = updated.find((s) => s.id === updatedSession.id)
+      const rest   = updated.filter((s) => s.id !== updatedSession.id)
+      const next   = target ? [target, ...rest] : updated
+      saveIndex(next)
       return next
     })
   }, [])
 
-  const updateSession = useCallback((id, updater) => {
-    setSessions((prev) => {
-      const updated   = prev.map((s) => (s.id === id ? updater(s) : s))
-      const target    = updated.find((s) => s.id === id)
-      const rest      = updated.filter((s) => s.id !== id)
-      const reordered = target ? [target, ...rest] : updated
-      save(reordered)
-      return reordered
-    })
-  }, [])
-
-  // ── Derived state ─────────────────────────────────────────────────────────────
-  const currentSession =
-    sessions.find((s) => s.id === currentSessionId) ?? sessions[0] ?? null
-
   return {
-    sessions,
-    currentSession,
-    currentSessionId: currentSession?.id ?? null,
+    sessions: index,              // lightweight index for sidebar
+    currentSession,               // full session with messages (null while loading)
+    currentSessionId,
+    loadingSession,
     createSession,
     switchSession,
     deleteSession,

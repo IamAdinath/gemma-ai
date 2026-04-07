@@ -1,5 +1,6 @@
 // components/BhashiniModal.jsx
 import { useState, useEffect } from 'react'
+import { useToast } from '../hooks/useToast'
 import './BhashiniModal.css'
 
 const LANGUAGES = [
@@ -12,6 +13,7 @@ const LANGUAGES = [
 export default function BhashiniModal({ isOpen, onClose }) {
   const [apiKey, setApiKey]   = useState('')
   const [lang, setLang]       = useState('mr')
+  const { toast } = useToast()
 
   useEffect(() => {
     if (isOpen) {
@@ -22,7 +24,12 @@ export default function BhashiniModal({ isOpen, onClose }) {
   }, [isOpen])
 
   const save = () => {
+    if (!apiKey.trim()) {
+      toast.warning('Please enter an API key before saving.')
+      return
+    }
     localStorage.setItem('bhashini_config', JSON.stringify({ key: apiKey.trim(), lang }))
+    toast.success('Bhashini config saved!')
     onClose()
   }
 

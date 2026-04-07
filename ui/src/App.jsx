@@ -5,9 +5,11 @@ import ChatMessage from './components/ChatMessage'
 import AgentStepsPanel from './components/AgentStepsPanel'
 import MessageInput from './components/MessageInput'
 import BhashiniModal from './components/BhashiniModal'
+import ToastContainer from './components/ToastContainer'
 import { useSessionStore } from './hooks/useSessionStore'
 import { runAgentLoop } from './hooks/useAgent'
-import { contextApi } from './services/api'
+import { useToast } from './hooks/useToast'
+import { contextApi, chatsApi } from './services/api'
 import { checkOllamaStatus, unloadModel, preloadModel } from './services/ollama'
 import './App.css'
 
@@ -20,9 +22,11 @@ const MODELS = {
 
 export default function App() {
   const {
-    sessions, currentSession, currentSessionId,
+    sessions, currentSession, currentSessionId, loadingSession,
     createSession, switchSession, deleteSession, updateSession,
   } = useSessionStore()
+
+  const { toast } = useToast()
 
   const [currentMode, setCurrentMode] = useState('chat')
   const [isGenerating, setIsGenerating]   = useState(false)
@@ -60,15 +64,17 @@ export default function App() {
       await preloadModel(MODELS[mode])
       setCurrentMode(mode)
       setStatus({ online: true, text: `${mode.toUpperCase()} Ready` })
+      toast.success(`Switched to ${mode.toUpperCase()} mode`)
     } catch {
       setStatus({ online: false, text: 'Boot failed' })
+      toast.error(`Failed to load model for ${mode} mode. Is Ollama running?`)
     }
     setIsSwapping(false)
   }, [currentMode, isSwapping, isGenerating])
 
   // ── Delete session + context file ────────────────────────────────────────────
   const handleDeleteSession = useCallback((id) => {
-    contextApi.delete(id).catch(() => {})
+    chatsApi.delete(id).catch(() => {})
     deleteSession(id)
   }, [deleteSession])
 
@@ -81,25 +87,33 @@ export default function App() {
     } catch {}
     const input = prompt('Paste custom rules, background, or JSON knowledge:\nThe agent will read this automatically.', existing)
     if (input !== null) {
-      await contextApi.save(currentSessionId, input)
-      alert(`Context saved to backend/data/contexts/${currentSessionId}.json`)
+      try {
+        await contextApi.save(currentSessionId, input)
+        toast.success(`Context saved — agent will use it in this chat`)
+      } catch {
+        toast.error('Failed to save context file. Is the backend running?')
+      }
     }
   }, [currentSessionId])
 
   // ── Send message → agent loop ─────────────────────────────────────────────────
   const handleSend = useCallback(async (text) => {
-    if (isGenerating || isSwapping) return
+    if (isGenerating || isSwapping || !currentSession) return
 
-    let session = currentSession
+    let session = { ...currentSession }
+
     // Auto-title on first message
     if (session.messages.length === 1 && session.messages[0].role === 'system') {
-      const title = text.trim().split(/\s+/).slice(0, 4).join(' ') + (text.split(/\s+/).length > 4 ? '…' : '')
-      updateSession(currentSessionId, (s) => ({ ...s, title }))
+      session = {
+        ...session,
+        title: text.trim().split(/\s+/).slice(0, 4).join(' ') + (text.split(/\s+/).length > 4 ? '…' : ''),
+      }
     }
 
     // Push user message
     const messagesWithUser = [...session.messages, { role: 'user', content: text }]
-    updateSession(currentSessionId, (s) => ({ ...s, messages: messagesWithUser }))
+    const sessionWithUser = { ...session, messages: messagesWithUser, updatedAt: Date.now() }
+    updateSession(sessionWithUser)
 
     setIsGenerating(true)
     setAgentSteps([])
@@ -112,20 +126,17 @@ export default function App() {
       onToken: (full) => setStreamingText(full),
       onStep: (step) => setAgentSteps((prev) => [...prev, step]),
       onDone: (_, finalMessages) => {
-        updateSession(currentSessionId, (s) => ({
-          ...s,
-          messages: finalMessages,
-          updatedAt: Date.now(),
-        }))
+        updateSession({ ...sessionWithUser, messages: finalMessages, updatedAt: Date.now() })
         setStreamingText('')
       },
       onError: (msg) => {
-        updateSession(currentSessionId, (s) => ({
-          ...s,
+        updateSession({
+          ...sessionWithUser,
           messages: [...messagesWithUser, { role: 'assistant', content: `**Error:** ${msg}` }],
-        }))
+        })
         setStreamingText('')
         setStatus({ online: false, text: msg })
+        toast.error(`Model error: ${msg}`)
       },
     })
 
@@ -179,29 +190,38 @@ export default function App() {
         {/* Chat area */}
         <main className="chat-area">
           <div className="chat-history">
-            {visibleMessages.length === 0 && (
-              <div className="welcome-msg">Hello! How can I help you today?</div>
-            )}
-            {visibleMessages.map((msg, i) => (
-              <ChatMessage key={i} role={msg.role} content={msg.content} />
-            ))}
-
-            {/* Live agent steps */}
-            {isGenerating && agentSteps.length > 0 && (
-              <AgentStepsPanel steps={agentSteps} />
-            )}
-
-            {/* Live streaming token output */}
-            {isGenerating && streamingText && (
-              <ChatMessage role="assistant" content={streamingText} />
-            )}
-
-            {/* Thinking spinner when no tokens yet */}
-            {isGenerating && !streamingText && agentSteps.length === 0 && (
-              <div className="thinking-spinner">
+            {loadingSession ? (
+              <div className="thinking-spinner" style={{ margin: '4rem auto' }}>
                 <div className="spinner" />
-                <span>Thinking…</span>
+                <span>Loading chat…</span>
               </div>
+            ) : (
+              <>
+                {visibleMessages.length === 0 && (
+                  <div className="welcome-msg">Hello! How can I help you today?</div>
+                )}
+                {visibleMessages.map((msg, i) => (
+                  <ChatMessage key={i} role={msg.role} content={msg.content} />
+                ))}
+
+                {/* Live agent steps */}
+                {isGenerating && agentSteps.length > 0 && (
+                  <AgentStepsPanel steps={agentSteps} />
+                )}
+
+                {/* Live streaming token output */}
+                {isGenerating && streamingText && (
+                  <ChatMessage role="assistant" content={streamingText} />
+                )}
+
+                {/* Thinking spinner when no tokens yet */}
+                {isGenerating && !streamingText && agentSteps.length === 0 && (
+                  <div className="thinking-spinner">
+                    <div className="spinner" />
+                    <span>Thinking…</span>
+                  </div>
+                )}
+              </>
             )}
 
             <div ref={chatEndRef} />
@@ -216,6 +236,7 @@ export default function App() {
       </div>
 
       <BhashiniModal isOpen={bhashiniOpen} onClose={() => setBhashiniOpen(false)} />
+      <ToastContainer />
     </div>
   )
 }
