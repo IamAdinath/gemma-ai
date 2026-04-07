@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from core.config import ALLOWED_ORIGINS, UI_DIR
-from api.routes import context, tools
+from api.routes import context, tools, chats
 
 app = FastAPI(
     title="Gemma AI Backend",
@@ -32,6 +32,7 @@ app.add_middleware(
 # ── API Routers ───────────────────────────────────────────────────────────────
 app.include_router(context.router)
 app.include_router(tools.router)
+app.include_router(chats.router)
 
 # ── Static UI (must be last — catch-all) ─────────────────────────────────────
 app.mount("/", StaticFiles(directory=str(UI_DIR), html=True), name="ui")
