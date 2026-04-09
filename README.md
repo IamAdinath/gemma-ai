@@ -1,4 +1,4 @@
-# 🤖 Gemma AI — Local Agentic Assistant
+# Nodescribe
 
 A fully local, privacy-first AI chat application with a real agentic execution loop. Runs entirely on your Mac using [Ollama](https://ollama.com). No cloud, no data leaving your machine.
 
@@ -51,8 +51,8 @@ brew install ollama
 ### 2. Clone the repo
 
 ```bash
-git clone https://github.com/IamAdinath/gemma-ai.git
-cd gemma-ai
+git clone https://github.com/IamAdinath/nodescribe.git
+cd nodescribe
 ```
 
 ### 3. Launch
@@ -79,7 +79,7 @@ chmod +x start.sh
 ## 📁 Project Structure
 
 ```
-gemma-ai/
+nodescribe/
 ├── start.sh                  ← Single launch entry point
 ├── README.md
 │
@@ -94,8 +94,6 @@ gemma-ai/
 └── backend/                  ← Python FastAPI server
     ├── requirements.txt
     ├── main.py               ← App entry point, logging, router config
-    ├── static/               ← Production UI build output
-    │
     ├── api/
     │   └── routes/
     │       ├── context.py    ← GET/POST/DELETE /api/context/{session_id}
@@ -110,6 +108,8 @@ gemma-ai/
     └── data/
         ├── chats/            ← Per-chat complete message history (JSON)
         └── contexts/         ← Per-chat knowledge file used by AI (JSON)
+
+ui/dist/                      ← Production UI build output created by `npm run build`
 ```
 
 ---

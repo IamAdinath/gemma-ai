@@ -30,6 +30,7 @@ pnpm-debug.log*
 dist/
 build/
 ui/dist/
+backend/static/
 
 # Local app data
 backend/data/
@@ -41,3 +42,4 @@ backend/data/
 
 # Local scratch / backups
 ui_old/
+*.orig

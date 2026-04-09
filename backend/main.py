@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from core.config import ALLOWED_ORIGINS, UI_DIR
+from core.config import ALLOWED_ORIGINS, UI_BUILD_DIR, UI_DIR
 from core.logging_config import setup_logging, get_logger
 from api.routes import context, tools, chats, system
 from core.model_selection import recommend_models
@@ -14,7 +14,7 @@ setup_logging(level="INFO")
 logger = get_logger("main")
 
 app = FastAPI(
-    title="Gemma AI Backend",
+    title="Nodescribe Backend",
     description="Local agentic AI backend — serves UI and tool execution APIs.",
     version="1.0.0",
 )
@@ -55,13 +55,13 @@ async def log_requests(request: Request, call_next):
 
 @app.on_event("startup")
 async def on_startup():
-    logger.info("\033[1;32m✓ Gemma AI backend started\033[0m")
+    logger.info("\033[1;32m✓ Nodescribe backend started\033[0m")
     logger.info("  Docs → \033[34mhttp://localhost:8000/docs\033[0m")
 
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    logger.info("\033[1;31m✗ Gemma AI backend shutting down\033[0m")
+    logger.info("\033[1;31m✗ Nodescribe backend shutting down\033[0m")
 
 
 @app.post("/api/shutdown")
@@ -97,4 +97,5 @@ app.include_router(tools.router)
 app.include_router(chats.router)
 app.include_router(system.router)
 
-app.mount("/", StaticFiles(directory=str(UI_DIR), html=True), name="ui")
+frontend_dir = UI_BUILD_DIR if UI_BUILD_DIR.exists() else UI_DIR
+app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="ui")

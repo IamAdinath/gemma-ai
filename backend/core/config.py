@@ -5,6 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent          # backend/
 DATA_DIR = BASE_DIR / "data"
 CONTEXTS_DIR = DATA_DIR / "contexts"
 UI_DIR = BASE_DIR.parent / "ui"
+UI_BUILD_DIR = UI_DIR / "dist"
 
 # ── Server ─────────────────────────────────────────────────────────────────────
 PORT: int = 8000

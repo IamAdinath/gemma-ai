@@ -185,7 +185,7 @@ export default function App() {
         <header className="app-header">
           <div className="app-logo">
             <span className="logo-icon">✧</span>
-            <h1>Gemma Chat</h1>
+            <h1>Nodescribe</h1>
           </div>
 
           <ModelSelector
@@ -266,7 +266,7 @@ export default function App() {
       
       <ConfirmModal
         isOpen={turnOffConfirmOpen}
-        title="Turn Off Gemma AI"
+        title="Turn Off Nodescribe"
         message="This will force-unload any active AI models to release RAM, stop all backend and frontend services, and close the application."
         confirmText="Turn Off"
         destructive={true}
