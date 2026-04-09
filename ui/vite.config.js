@@ -14,7 +14,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../backend/static',  // FastAPI serves this in production
+    outDir: 'dist',
     emptyOutDir: true,
   }
 })
