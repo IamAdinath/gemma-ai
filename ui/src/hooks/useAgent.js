@@ -3,16 +3,9 @@
 import { contextApi, toolsApi } from '../services/api'
 import { streamChat } from '../services/ollama'
 
-const MODELS = {
-  chat:  { id: 'gemma4:e2b',          tools: true  },
-  code:  { id: 'qwen2.5-coder:7b',    tools: true  },
-  story: { id: 'deepseek-r1:7b',      tools: false },
-}
-
 const MODE_PROMPTS = {
   chat:  'You are a powerful agentic AI assistant. Use tools proactively whenever you need real-world data, web info, or to run code.',
   code:  'You are an elite software architect. Use tools to verify logic, run code, or fetch documentation. Output clean, well-commented code.',
-  story: 'You are a master storyteller. Write vivid, culturally rich scripts in English, Hindi, or Marathi. Use <think> tags to plan your narrative before writing. IMPORTANT: Respond only with natural language prose or script text. Never output JSON, tool calls, or structured data of any kind — not even as examples.',
 }
 function sanitizeForDisplay(text) {
   // Remove fenced ```json blocks containing tool-call shaped objects
@@ -131,6 +124,7 @@ async function executeTool(name, args, sessionId, onStep) {
   }
 }
 export async function runAgentLoop({
+  models,
   mode,
   messages,
   sessionId,
@@ -139,7 +133,11 @@ export async function runAgentLoop({
   onDone,
   onError,
 }) {
-  const modelConfig = MODELS[mode]
+  const modelConfig = models?.[mode]
+  if (!modelConfig) {
+    onError(`No model configured for ${mode} mode`)
+    return { messages, finalResponse: '' }
+  }
   const targetModel = modelConfig.id
   const supportsTools = modelConfig.tools
   const modeInstruction = MODE_PROMPTS[mode]

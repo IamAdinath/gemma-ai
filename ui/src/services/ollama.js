@@ -29,6 +29,28 @@ export async function preloadModel(modelId) {
   })
 }
 
+export async function listModels() {
+  const response = await fetch(`${OLLAMA}/api/tags`)
+  if (!response.ok) throw new Error('Failed to read installed Ollama models')
+  const data = await response.json()
+  return data.models || []
+}
+
+export async function pullModel(modelId) {
+  const response = await fetch(`${OLLAMA}/api/pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: modelId, stream: false }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || `Failed to pull ${modelId}`)
+  }
+
+  return response.json().catch(() => ({}))
+}
+
 /**
  * Stream a chat completion from Ollama.
  * Calls onChunk(parsedLine) for each streamed JSON line.

@@ -36,7 +36,5 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.mode-btn--fast.active  { background: linear-gradient(135deg, #10b981, #059669); }
 .mode-btn--chat.active  { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
 .mode-btn--code.active  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-.mode-btn--story.active { background: linear-gradient(135deg, #f59e0b, #d97706); }

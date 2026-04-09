@@ -22,6 +22,12 @@ export const toolsApi = {
   searchWeb: (query) =>
     fetch(`${BASE}/api/tools/search_web?query=${encodeURIComponent(query)}`).then((r) => r.json()),
 }
+
+export const systemApi = {
+  getRecommendedModels: () =>
+    fetch(`${BASE}/api/system/models`).then((r) => r.json()),
+}
+
 export const chatsApi = {
   get: (sessionId) =>
     fetch(`${BASE}/api/chats/${sessionId}`).then((r) => {
