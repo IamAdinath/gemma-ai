@@ -7,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 
 from core.config import ALLOWED_ORIGINS, UI_DIR
 from core.logging_config import setup_logging, get_logger
-from api.routes import context, tools, chats
+from api.routes import context, tools, chats, system
+from core.model_selection import recommend_models
 
 setup_logging(level="INFO")
 logger = get_logger("main")
@@ -73,8 +74,9 @@ async def shutdown_system():
 
     def kill_servers():
         # Unload all models to free RAM immediately
+        selected_models = [mode["id"] for mode in recommend_models()["modes"].values()]
         with httpx.Client() as client:
-            for model in ["gemma4:e2b", "qwen2.5-coder:7b", "deepseek-r1:7b"]:
+            for model in selected_models:
                 try:
                     client.post("http://127.0.0.1:11434/api/generate", json={"model": model, "keep_alive": 0})
                 except Exception:
@@ -93,5 +95,6 @@ async def shutdown_system():
 app.include_router(context.router)
 app.include_router(tools.router)
 app.include_router(chats.router)
+app.include_router(system.router)
 
 app.mount("/", StaticFiles(directory=str(UI_DIR), html=True), name="ui")

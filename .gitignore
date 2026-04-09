@@ -1,0 +1,43 @@
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+
+# Virtual environments
+.venv/
+venv/
+backend/venv/
+
+# Node / frontend
+node_modules/
+ui/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+ui/dist/
+
+# Local app data
+backend/data/
+
+# OS / editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Local scratch / backups
+ui_old/

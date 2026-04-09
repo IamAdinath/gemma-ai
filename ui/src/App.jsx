@@ -10,15 +10,9 @@ import ToastContainer from './components/ToastContainer'
 import { useSessionStore } from './hooks/useSessionStore'
 import { runAgentLoop } from './hooks/useAgent'
 import { useToast } from './hooks/useToast'
-import { contextApi, chatsApi } from './services/api'
-import { checkOllamaStatus, unloadModel, preloadModel } from './services/ollama'
+import { chatsApi, systemApi } from './services/api'
+import { checkOllamaStatus, listModels, pullModel, unloadModel, preloadModel } from './services/ollama'
 import './App.css'
-
-const MODELS = {
-  chat:  'gemma4:e2b',
-  code:  'qwen2.5-coder:7b',
-  story: 'deepseek-r1:7b',
-}
 
 export default function App() {
   const {
@@ -29,6 +23,8 @@ export default function App() {
   const { toast } = useToast()
 
   const [currentMode, setCurrentMode] = useState('chat')
+  const [modes, setModes] = useState(null)
+  const [systemInfo, setSystemInfo] = useState(null)
   const [isGenerating, setIsGenerating]   = useState(false)
   const [isSwapping, setIsSwapping]       = useState(false)
   const [status, setStatus]               = useState({ online: false, text: 'Checking Ollama...' })
@@ -40,26 +36,73 @@ export default function App() {
   const chatEndRef = useRef(null)
 
   useEffect(() => {
-    checkOllamaStatus().then((ok) =>
-      setStatus({ online: ok, text: ok ? 'Ollama Active' : 'Ollama Offline' })
-    )
-  }, [])
+    let cancelled = false
+
+    async function bootRecommendedModels() {
+      const ok = await checkOllamaStatus()
+      if (!ok) {
+        if (!cancelled) setStatus({ online: false, text: 'Ollama Offline' })
+        return
+      }
+
+      try {
+        setStatus({ online: true, text: 'Inspecting system specs...' })
+        const recommendation = await systemApi.getRecommendedModels()
+        if (cancelled) return
+
+        setModes(recommendation.modes)
+        setSystemInfo(recommendation.system)
+
+        setStatus({
+          online: true,
+          text: `Recommended for ${recommendation.system.memoryGb}GB RAM: ${recommendation.modes.chat.id} + ${recommendation.modes.code.id}`,
+        })
+
+        const installed = await listModels()
+        const installedIds = new Set(installed.map((model) => model.name))
+
+        for (const [mode, config] of Object.entries(recommendation.modes)) {
+          if (!installedIds.has(config.id)) {
+            setStatus({ online: true, text: `Pulling ${config.id} for ${mode.toUpperCase()}...` })
+            await pullModel(config.id)
+          }
+        }
+
+        setStatus({ online: true, text: `Booting ${recommendation.modes.chat.id}...` })
+        await preloadModel(recommendation.modes.chat.id)
+        if (!cancelled) {
+          setCurrentMode('chat')
+          setStatus({ online: true, text: 'CHAT Ready' })
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStatus({ online: false, text: error.message || 'Model setup failed' })
+          toast.error(error.message || 'Failed to prepare recommended models')
+        }
+      }
+    }
+
+    bootRecommendedModels()
+    return () => {
+      cancelled = true
+    }
+  }, [toast])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [currentSession?.messages, streamingText, agentSteps])
 
   const handleModeChange = useCallback(async (mode) => {
-    if (mode === currentMode || isSwapping || isGenerating) return
+    if (mode === currentMode || isSwapping || isGenerating || !modes?.[mode]) return
     setIsSwapping(true)
     setStatus({ online: true, text: 'Unloading models...' })
 
-    const unused = Object.entries(MODELS).filter(([k]) => k !== mode).map(([, v]) => v)
+    const unused = Object.entries(modes).filter(([k]) => k !== mode).map(([, v]) => v.id)
     for (const m of unused) await unloadModel(m)
 
-    setStatus({ online: true, text: `Booting ${MODELS[mode]}...` })
+    setStatus({ online: true, text: `Booting ${modes[mode].id}...` })
     try {
-      await preloadModel(MODELS[mode])
+      await preloadModel(modes[mode].id)
       setCurrentMode(mode)
       setStatus({ online: true, text: `${mode.toUpperCase()} Ready` })
       toast.success(`Switched to ${mode.toUpperCase()} mode`)
@@ -68,7 +111,7 @@ export default function App() {
       toast.error(`Failed to load model for ${mode} mode. Is Ollama running?`)
     }
     setIsSwapping(false)
-  }, [currentMode, isSwapping, isGenerating])
+  }, [currentMode, isSwapping, isGenerating, modes, toast])
 
   const handleDeleteSession = useCallback((id) => {
     chatsApi.delete(id).catch(() => {})
@@ -103,6 +146,7 @@ export default function App() {
       sessionId: currentSessionId,
       onToken: (full) => setStreamingText(full),
       onStep: (step) => setAgentSteps((prev) => [...prev, step]),
+      models: modes,
       onDone: (_, finalMessages) => {
         updateSession({ ...sessionWithUser, messages: finalMessages, updatedAt: Date.now() })
         setStreamingText('')
@@ -120,7 +164,7 @@ export default function App() {
 
     setIsGenerating(false)
     setAgentSteps([])
-  }, [currentSession, currentSessionId, currentMode, isGenerating, isSwapping, updateSession])
+  }, [currentSession, currentSessionId, currentMode, isGenerating, isSwapping, modes, toast, updateSession])
 
   const visibleMessages = (currentSession?.messages || []).filter(
     (m) => m.role !== 'system' && m.role !== 'tool'
@@ -147,7 +191,8 @@ export default function App() {
           <ModelSelector
             currentMode={currentMode}
             onChange={handleModeChange}
-            disabled={isGenerating || isSwapping}
+            disabled={isGenerating || isSwapping || !modes}
+            modes={modes}
           />
 
           <div className="header-actions">
@@ -207,7 +252,12 @@ export default function App() {
 
         {/* Footer input */}
         <footer className="app-footer">
-          <MessageInput onSend={handleSend} disabled={isGenerating || isSwapping} />
+          <MessageInput onSend={handleSend} disabled={isGenerating || isSwapping || !modes} />
+          {systemInfo && modes && (
+            <p className="disclaimer">
+              Recommended from this machine: {systemInfo.cpu}, {systemInfo.memoryGb}GB RAM. Chat uses {modes.chat.id}; code uses {modes.code.id}.
+            </p>
+          )}
           <p className="disclaimer">Responses are generated locally. Your data never leaves your machine.</p>
         </footer>
       </div>

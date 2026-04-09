@@ -1,23 +1,20 @@
 import './ModelSelector.css'
 
-const MODES = [
-  { id: 'chat',  label: '🧠 Chat'  },
-  { id: 'code',  label: '💻 Code'  },
-  { id: 'story', label: '✍️ Story' },
-]
+const MODE_ORDER = ['chat', 'code']
 
-export default function ModelSelector({ currentMode, onChange, disabled }) {
+export default function ModelSelector({ currentMode, onChange, disabled, modes }) {
   return (
     <div className="model-selector">
-      {MODES.map((m) => (
+      {MODE_ORDER.map((modeId) => (
         <button
-          key={m.id}
-          className={`mode-btn mode-btn--${m.id} ${currentMode === m.id ? 'active' : ''}`}
-          onClick={() => !disabled && onChange(m.id)}
+          key={modeId}
+          className={`mode-btn mode-btn--${modeId} ${currentMode === modeId ? 'active' : ''}`}
+          onClick={() => !disabled && onChange(modeId)}
           disabled={disabled}
-          aria-pressed={currentMode === m.id}
+          aria-pressed={currentMode === modeId}
+          title={modes?.[modeId] ? `${modes[modeId].id} • agentic • web access` : modeId}
         >
-          {m.label}
+          {modeId === 'chat' ? '🧠 Chat' : '💻 Code'}
         </button>
       ))}
     </div>

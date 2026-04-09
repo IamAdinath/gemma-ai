@@ -2,6 +2,7 @@ import re
 import subprocess
 import urllib.request
 import urllib.parse
+from html import unescape
 from typing import Any
 
 import httpx
@@ -70,20 +71,66 @@ def fetch_url(url: str) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         return {"error": str(exc)}
 
+def _search_web_fallback(query: str) -> list[dict[str, str]]:
+    """
+    Fallback search path using DuckDuckGo's HTML endpoint.
+    This is less structured than the API-backed library, but it keeps
+    web access available when the primary endpoint is rate-limited.
+    """
+    encoded_query = urllib.parse.urlencode({"q": query})
+    url = f"https://html.duckduckgo.com/html/?{encoded_query}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    with httpx.Client(follow_redirects=True, timeout=URL_FETCH_TIMEOUT, headers=headers) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        html = response.text
+
+    pattern = re.compile(
+        r'<a[^>]+class="result__a"[^>]+href="(?P<href>[^"]+)"[^>]*>(?P<title>.*?)</a>.*?'
+        r'<a[^>]+class="result__snippet"[^>]*>(?P<body>.*?)</a>',
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    results = []
+    for match in pattern.finditer(html):
+        raw_href = urllib.parse.unquote(match.group("href"))
+        parsed_href = urllib.parse.urlparse(raw_href)
+        href_query = urllib.parse.parse_qs(parsed_href.query)
+        href = href_query.get("uddg", [raw_href])[0]
+        title = unescape(_strip_html(match.group("title")))
+        body = unescape(_strip_html(match.group("body")))
+        if "duckduckgo.com/y.js" in href or "ad_domain=" in href:
+            continue
+        if title and href:
+            results.append({"title": title, "href": href, "body": body})
+        if len(results) >= 5:
+            break
+    return results
+
+
 def search_web(query: str) -> dict[str, Any]:
     """
     Search the web using DuckDuckGo via duckduckgo_search.
     Returns the top 5 results as a formatted string.
     """
     try:
-        results = DDGS().text(query, max_results=5)
+        try:
+            results = list(DDGS().text(query, max_results=5))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Primary search failed, using fallback  err=%s", exc)
+            results = _search_web_fallback(query)
+
         if not results:
             return {"results": f"No results found for: {query}. Try fetch_url with a direct website."}
-        
+
         parsed = []
         for r in results:
             parsed.append(f"Title: {r.get('title')}\nURL: {r.get('href')}\nSnippet: {r.get('body')}")
-        
+
         return {"query": query, "results": "\n\n".join(parsed)}
     except Exception as exc:  # noqa: BLE001
         return {"error": f"Search engine error: {str(exc)}"}

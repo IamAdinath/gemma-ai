@@ -6,7 +6,7 @@ A fully local, privacy-first AI chat application with a real agentic execution l
 
 ## ✨ Features
 
-- **3 Model Modes** — Chat (agentic), Code (agentic), Story
+- **2 Recommended Modes** — Chat and Code, chosen from your machine specs
 - **Real Agentic Loop** — ReAct-style Observe → Think → Act → Observe cycle
 - **Live Agent Steps Panel** — watch the model decide and execute tools in real-time
 - **Agentic Tools** — web search, URL fetcher, Python code runner, context file read/write
@@ -18,13 +18,17 @@ A fully local, privacy-first AI chat application with a real agentic execution l
 
 ---
 
-## 🧠 Model Roster
+## 🧠 Model Selection
 
 | Mode | Model | Tools | Purpose |
 |------|-------|-------|---------|
-| 🧠 Chat | `gemma4:e2b` | ✓ | Deep reasoning + real agentic tool use |
-| 💻 Code | `qwen2.5-coder:7b` | ✓ | Code generation, runs/verifies its own code |
-| ✍️ Story | `deepseek-r1:7b` | ✗ | Marathi/Hindi/English storytelling |
+| 🧠 Chat | Auto-selected | ✓ | General reasoning, web access, agentic task execution |
+| 💻 Code | Auto-selected | ✓ | Coding, debugging, verification, code-aware tool use |
+
+The backend inspects system RAM and recommends exactly two Ollama models:
+- `16GB+` machines: `qwen2.5:7b` for chat and `qwen2.5-coder:7b` for code
+- `32GB+` machines: `qwen2.5:14b` for chat and `qwen2.5-coder:14b` for code
+- Smaller systems: `qwen2.5:3b` for chat and `qwen2.5-coder:3b` for code
 
 ---
 
@@ -44,22 +48,14 @@ A fully local, privacy-first AI chat application with a real agentic execution l
 brew install ollama
 ```
 
-### 2. Pull the models
-
-```bash
-ollama pull gemma4:e2b
-ollama pull qwen2.5-coder:7b
-ollama pull deepseek-r1:7b
-```
-
-### 3. Clone the repo
+### 2. Clone the repo
 
 ```bash
 git clone https://github.com/IamAdinath/gemma-ai.git
 cd gemma-ai
 ```
 
-### 4. Launch
+### 3. Launch
 
 ```bash
 chmod +x start.sh
@@ -68,6 +64,8 @@ chmod +x start.sh
 
 `start.sh` will automatically:
 - Start `ollama serve` with CORS enabled
+- Inspect your machine specs and recommend one chat model plus one code model
+- Pull those recommended models automatically if they are missing
 - Create a Python virtual environment at `backend/venv/` (first run only)
 - Install frontend (Vite/React) and backend (FastAPI) dependencies
 - Launch the FastAPI server at `http://localhost:8000`
@@ -101,10 +99,12 @@ gemma-ai/
     ├── api/
     │   └── routes/
     │       ├── context.py    ← GET/POST/DELETE /api/context/{session_id}
+    │       ├── system.py     ← GET /api/system/models
     │       └── tools.py      ← POST /api/tools/run_python, GET /api/tools/fetch_url
     │
     ├── core/
     │   ├── config.py         ← All paths and constants (single source of truth)
+    │   ├── model_selection.py← System-spec based chat/code recommendations
     │   └── tool_runner.py    ← Tool execution logic (isolated from HTTP layer)
     │
     └── data/
@@ -126,6 +126,7 @@ Full interactive docs available at **[http://localhost:8000/docs](http://localho
 | `GET` | `/api/context/{id}` | Read session context file |
 | `POST` | `/api/context/{id}` | Write/overwrite session context |
 | `DELETE` | `/api/context/{id}` | Delete session context file |
+| `GET` | `/api/system/models` | Return system specs and recommended chat/code models |
 | `POST` | `/api/tools/run_python` | Execute Python code (5s timeout) |
 | `GET` | `/api/tools/fetch_url?url=` | Fetch and strip a URL's content |
 
@@ -139,7 +140,7 @@ It is automatically:
 - **Read** by the agent's `read_context` tool during agentic loops
 - **Deleted** when you delete the chat from the sidebar
 
-You can also edit these files directly in VS Code for large rulesets or story outlines.
+You can also edit these files directly in VS Code for large rulesets or background notes.
 
 ---
 
@@ -158,9 +159,9 @@ Requires a free account at [bhashini.gov.in](https://bhashini.gov.in).
 
 - Only **one model** is kept in RAM at a time via Ollama's `keep_alive` management
 - CPU threads are hard-capped at **4 of 8 cores** (`num_thread: 4`)
-- Context window: **1024 tokens** (Story/Fast), **2048 tokens** (Chat/Code)
-- Do not swap Code model above `7b` — the 30b variant will cause memory swap-death
-- `deepseek-r1:7b` does not support Ollama's native tool-calling; context is injected manually
+- Context window: **2048 tokens** for the active chat/code model
+- On 16GB machines, the app stays on `7b` class recommendations to avoid swap pressure
+- Only the recommended chat/code pair is used in the active UI
 
 ---
 
